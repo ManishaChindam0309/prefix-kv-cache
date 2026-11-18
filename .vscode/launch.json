@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Benchmark (offline random model)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/benchmark.py",
+      "args": [
+        "--offline-random"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Benchmark (gpt2 from Hugging Face)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/benchmark.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Chat demo (Qwen2.5-0.5B-Instruct)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/demo.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}
