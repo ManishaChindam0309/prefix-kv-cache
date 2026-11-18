@@ -241,6 +241,4 @@ Through this project, I explored:
 
 GitHub: [ManishaChindam0309](https://github.com/ManishaChindam0309)
 
----
 
-⭐ If you find this project interesting, feel free to explore the repository and share your feedback!
