@@ -6,8 +6,9 @@ A memory-aware Prefix Key-Value (KV) Cache designed to optimize autoregressive L
 
 This project explores how caching, prefix reuse, pinned cache entries, memory-aware eviction, and GPU memory management can reduce repeated computation during LLM inference.
 
-\<p align="center">   \<img src="prefix_kv_cache_architecture.png" alt="Prefix KV Cache Architecture" width="850"> \</p>
-
+<p align="center"> 
+  <img src="prefix_kv_cache_architecture.png" alt="Prefix KV Cache Architecture" width="850"> 
+</p>
 ---
 
 ## Overview
