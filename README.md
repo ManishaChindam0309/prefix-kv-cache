@@ -475,9 +475,3 @@ Potential directions for further development:
 AI Systems Engineering | LLM Inference Optimization
 
 GitHub: [https://github.com/ManishaChindam0309](https://github.com/ManishaChindam0309)
-
----
-
-## License
-
-No license has been added to this repository yet. Add a license file before describing the project as open source or specifying reuse permissions.
