@@ -1,244 +1,363 @@
 # Prefix KV Cache
+### An AI Systems Project for LLM Inference Optimization
 
-**Reducing Transformer LLM inference latency through reusable Key-Value (KV) states.**
+**Prefix KV Cache** is a Python-based AI systems project that improves Transformer inference efficiency by reusing previously computed Key-Value (KV) states for repeated input prefixes.
 
-Prefix KV Cache is a Python-based implementation that improves Large Language Model (LLM) inference efficiency by caching and reusing previously computed Key-Value (KV) states for identical system prompt prefixes.
+Instead of recomputing the same prefix for every request, the system stores and reuses its KV states to reduce redundant computation and inference latency.
 
-Instead of processing the same system prompt repeatedly, the model reuses cached KV states and processes only the new user input, reducing redundant computation and inference latency.
+The project focuses on reusable prefix caching, pinned KV states, LRU eviction, memory-aware cache management, and concurrent inference.
 
-## 🚀 Project Overview
+---
 
-In conversational AI applications, multiple requests often share the same system prompt. A Transformer model normally processes this repeated prefix for every request, resulting in unnecessary computation.
+## Project Overview
 
-This project addresses this problem using **Prefix KV Caching**.
+Large Language Models repeatedly process common context, such as system prompts and instructions. Recomputing this context for every request introduces unnecessary computation.
 
-### Key Features
+This project addresses that problem through a reusable prefix KV cache.
 
-- Reuses previously computed KV states for identical prompt prefixes.
-- Uses hash-based prefix identification for cache lookup.
-- Implements an LRU (Least Recently Used) eviction strategy.
-- Uses deep copies of cached KV states to prevent unintended modifications.
-- Compares inference latency with and without caching.
-- Tracks cache hits and calculates cache hit rate.
+**Objective:** Reduce repeated Transformer computation and improve inference efficiency through intelligent KV cache management.
 
-## 🏗️ Architecture
+## Architecture
 
 ![Prefix KV Cache Architecture](prefix_kv_cache_architecture.png)
 
-The flowchart illustrates the complete caching workflow:
+The system has two main components:
 
-1. Receive a new user request.
-2. Tokenize the system prompt and identify its prefix.
-3. Check whether the prefix exists in the cache.
-4. **Cache Hit:** Retrieve and reuse previously computed KV states.
-5. **Cache Miss:** Process the prefix, compute KV states, and store them in the cache.
-6. Process new user tokens and generate the response.
+### 1. PrefixKVCache
 
-## ⚙️ How It Works
+Manages storage and lifecycle of prefix KV states.
 
-### 1. Tokenization
-The system prompt and user message are converted into tokens separately.
+Responsibilities:
+- Store and retrieve KV states.
+- Pin and unpin prefixes.
+- Track cache hits and misses.
+- Perform LRU eviction.
+- Enforce entry-count and optional memory limits.
+- Track memory usage and cache statistics.
 
-### 2. Prefix Identification
-The system identifies the system prompt prefix using its token IDs and a hash-based lookup.
+### 2. CachedGenerator
 
-### 3. Cache Lookup
-The cache checks whether the prefix has already been processed.
+Connects the prefix cache to Transformer inference.
 
-### 4. Cache Hit
-If the prefix exists:
-- Retrieve the stored KV states.
-- Create a deep copy to avoid modifying cached states.
-- Process only the new user tokens.
-- Generate the response.
+Responsibilities:
+- Compute prefix KV states.
+- Retrieve reusable cached prefixes.
+- Generate tokens using cached KV states.
+- Support token-ID-based and tokenizer-based generation.
 
-### 5. Cache Miss
-If the prefix does not exist:
-- Process the system prompt.
-- Compute its KV states.
-- Store the states in the cache.
-- Continue generating the response.
+## Key Features
 
-### 6. Cache Management
-An LRU eviction strategy manages cache entries. When the cache reaches its maximum capacity, the least recently used entry is removed.
+- **Prefix KV Caching:** Reuse previously computed attention Key-Value states.
+- **Pinned Prefixes:** Protect frequently used prefixes from LRU eviction.
+- **Multiple Pinned Prefixes:** Support multiple reusable prefixes simultaneously.
+- **LRU Eviction:** Remove least-recently-used unpinned entries when capacity is reached.
+- **Memory-Aware Eviction:** Enforce configurable KV memory budgets.
+- **KV Memory Accounting:** Estimate tensor memory usage, including Hugging Face `DynamicCache` objects.
+- **Concurrent Cache Access:** Synchronize cache operations for concurrent callers.
+- **Cached Transformer Generation:** Reuse cached prefix states during text generation.
 
-## 📊 Performance Results
+## Technology Stack
 
-The project was tested using:
-
-| Configuration | Details |
+| Technology | Purpose |
 |---|---|
-| Model | Qwen2.5-0.5B-Instruct |
-| Hardware | CPU |
-| New tokens | 10 |
-| Cache capacity | 100 entries (default) |
+| Python | Core implementation |
+| PyTorch | Tensor operations and model inference |
+| CUDA | GPU acceleration |
+| Hugging Face Transformers | Transformer model integration |
+| GPT-2 | Benchmark and validation model |
+| ThreadPoolExecutor | Concurrent request testing |
+| Pytest | Test framework |
 
-### Benchmark Comparison
-
-Results obtained by running:
-
-`python demo.py --new-tokens 10`
-
-| Request | Without Cache | With Cache | Latency Reduction |
-|---|---:|---:|---:|
-| First request (cache miss) | 2854 ms | 2695 ms | 6% |
-| Refund after 3 weeks | 2749 ms | 1427 ms | 48% |
-| When is support open? | 2596 ms | 1406 ms | 46% |
-| Do I need a receipt? | 2683 ms | 1426 ms | 47% |
-
-### Key Observations
-
-- Cache hits achieved approximately **1.9x faster inference** in these measurements.
-- Repeated requests showed approximately **46–48% latency reduction**.
-- Around **1.2 seconds were saved per cache hit**.
-- The first request was a cache miss because the prefix had to be computed and stored.
-- The demo reported a **75% cache hit rate**.
-
-**Note:** These are observed CPU benchmark results from the project demo. Actual performance may vary depending on hardware, model, prompt length, and generation settings.
-
-## 🛠️ Technologies Used
-
-- Python
-- PyTorch
-- Hugging Face Transformers
-- Qwen2.5-0.5B-Instruct
-- pytest
-- LRU Cache
-
-## 📁 Project Structure
+## Repository Structure
 
 ```text
 prefix-kv-cache/
 │
-├── prefix_kv_cache/       # KV cache implementation
-├── tests/                 # Unit tests
-├── demo.py                # Interactive demo
-├── benchmark.py           # Performance benchmarking
-├── requirements.txt       # Project dependencies
-├── README.md              # Project documentation
+├── prefix_kv_cache/
+│   └── Core cache implementation
+│
+├── tests/
+│   └── Additional test directory
+│
+├── benchmark.py
+├── benchmark_lru_vs_pinned.py
+├── benchmark_memory_scaling.py
+├── benchmark_pinned_prefix.py
+├── benchmark_prefix_lengths.py
+├── benchmark_shared_prefix.py
+│
+├── test_cache_thread_safety.py
+├── test_concurrent_requests.py
+├── test_memory_aware_cache.py
+├── test_multiple_pinned_prefixes.py
+├── test_pinned_cache.py
+├── test_pinned_prefix_memory.py
+├── test_real_model_memory.py
+│
+├── demo.py
+├── inspect_dynamic_cache.py
 ├── prefix_kv_cache_architecture.png
-└── prefix_kv_cache_results.xlsx
+├── prefix_kv_cache_results.xlsx
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
 
-## 💻 Installation and Setup
+## Installation
 
-### Step 1: Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/ManishaChindam0309/prefix-kv-cache.git
+
 cd prefix-kv-cache
 ```
 
-### Step 2: Create a Virtual Environment
+### 2. Create a virtual environment
 
-```bash
-python -m venv .venv
-```
-
-Activate the environment.
-
-**Windows:**
+Windows PowerShell:
 
 ```powershell
-.venv\Scripts\activate
+python -m venv .venv
+
+.venv\Scripts\Activate.ps1
 ```
 
-**Linux / macOS:**
+### 3. Install dependencies
 
-```bash
-source .venv/bin/activate
-```
-
-### Step 3: Install Dependencies
-
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-## ▶️ Running the Project
+Dependencies:
 
-### Run the Demo
-
-```bash
-python demo.py
+```text
+torch>=2.6
+transformers>=4.45,<5
+pytest>=8.0
 ```
 
-To generate 10 new tokens:
+For GPU acceleration, install a PyTorch build compatible with your NVIDIA GPU and CUDA environment.
 
-```bash
-python demo.py --new-tokens 10
+## Usage
+
+### Initialize the cache
+
+```python
+from prefix_kv_cache import PrefixKVCache
+
+cache = PrefixKVCache(
+    max_entries=100,
+    max_memory_mb=100
+)
 ```
 
-### Run Tests
+The `max_memory_mb` parameter is optional. It limits the estimated memory occupied by cached KV tensor payloads.
 
-```bash
-pytest
+### Initialize CachedGenerator
+
+After loading a compatible Transformer model and tokenizer:
+
+```python
+generator = CachedGenerator(
+    model,
+    tokenizer,
+    cache
+)
 ```
 
-### Run the Benchmark
+### Pin a reusable system prompt
 
-```bash
-python benchmark.py
+```python
+generator.pin_system_prompt(
+    "You are a helpful assistant."
+)
 ```
 
-For offline random-input benchmarking:
+Pinned prefixes are protected from normal LRU eviction.
 
-```bash
-python benchmark.py --offline-random
+### Generate a response
+
+```python
+response = generator.generate(
+    "You are a helpful assistant.",
+    "Explain how Transformer attention works.",
+    max_new_tokens=50,
+    use_cache=True
+)
+
+print(response)
 ```
 
-To use Qwen2.5-0.5B-Instruct:
+### Work with token IDs
 
-```bash
-python benchmark.py --model Qwen/Qwen2.5-0.5B-Instruct
+```python
+generator.pin_prefix(prefix_ids)
+
+output_ids = generator.generate_ids(
+    prefix_ids,
+    suffix_ids,
+    max_new_tokens=20,
+    use_cache=True
+)
 ```
 
-## 🧠 Important Implementation Details
+### Unpin a prefix
 
-- **Exact Prefix Matching:** Cache reuse requires an identical tokenized prefix.
-- **Hash-Based Lookup:** Prefix token IDs are used to identify cache entries.
-- **Deep Copy of KV States:** Prevents unintended changes to stored cache states.
-- **LRU Eviction:** Removes the least recently used entry when capacity is reached.
-- **Configurable Cache Capacity:** Uses a default maximum of 100 entries.
+```python
+generator.unpin_prefix(prefix_ids)
+```
 
-## ⚠️ Limitations
+Unpinned entries become eligible for normal LRU eviction.
 
-- Only identical tokenized prefixes are reused.
-- Different system prompts require separate cache entries.
-- KV states consume memory, especially for longer prompts and larger models.
-- The current implementation focuses on prefix caching rather than complete production inference optimization.
-- Performance depends on model architecture, hardware, and prompt length.
+### Monitor cache statistics
 
-For production-grade inference optimization, explore:
+```python
+print(cache.stats)
+```
 
-- [vLLM](https://github.com/vllm-project/vllm)
-- [SGLang](https://github.com/sgl-project/sglang)
+Statistics include:
+- Total cache entries
+- Pinned entries
+- Ordinary entries
+- Cache hits and misses
+- Eviction count
+- Cache hit rate
+- Estimated memory usage
+- Pinned memory usage
+- Memory capacity and utilization
 
-## 🔮 Future Improvements
+## Performance Evaluation
 
-- Add cache hit, miss, and eviction statistics.
-- Experiment with different system prompt lengths.
-- Compare CPU and GPU performance.
-- Evaluate different model sizes.
-- Compare against production inference frameworks.
-- Explore more advanced prefix caching strategies.
+Experiments were conducted using GPT-2 on an NVIDIA GeForce RTX 2050 GPU with 4 GB VRAM.
 
-## 📚 Key Learnings
+### 1. Pinned Prefix Benchmark
 
-Through this project, I explored:
+| Prefix Length | Standard Latency | Pinned Latency | Speedup | Latency Reduction |
+|---|---:|---:|---:|---:|
+| 512 tokens | 155.05 ms | 93.40 ms | 1.66× | 39.76% |
+| 768 tokens | 180.20 ms | 98.57 ms | 1.83× | 45.30% |
 
-- Transformer attention mechanisms.
-- Key-Value caching in autoregressive language models.
-- Reducing redundant computation during LLM inference.
-- Hash-based cache lookup.
-- LRU cache management.
-- Model inference benchmarking and latency evaluation.
-- Maintaining correctness when reusing cached KV states.
+Prefix preparation time was measured separately:
 
-## 👩‍💻 Author
+- 512-token prefix: 58.82 ms
+- 768-token prefix: 90.67 ms
+
+Steady-state latency measurements exclude initial prefix preparation.
+
+### 2. Shared-Prefix Benchmark
+
+A workload of 10 questions sharing a common prefix was repeated over 10 rounds, with results averaged across three runs.
+
+| Prefix Length | Standard Latency | Cached Latency | Speedup |
+|---|---:|---:|---:|
+| 512 tokens | 155.82 ms | 98.67 ms | 1.58× |
+| 768 tokens | 177.09 ms | 96.81 ms | 1.83× |
+
+Measured cache hit rate: **99.02%**
+
+### 3. Natural-Language Workload
+
+A separate benchmark used a 46-token system prompt, four competing prompts, and 48 requests per trial across three trials.
+
+| Strategy | Mean Latency |
+|---|---:|
+| No Cache | 238.90 ms |
+| Ordinary LRU | 168.41 ms |
+| Pinned LRU | 157.71 ms |
+| Pinned LRU including average setup time | 158.63 ms |
+
+Pinned caching achieved a measured 33.60% latency reduction compared with no caching, including average pin preparation time.
+
+### 4. KV Memory Accounting
+
+A real GPT-2 KV cache was tested using Hugging Face Transformers `DynamicCache`.
+
+| Measurement | Result |
+|---|---:|
+| Prefix length | 19 tokens |
+| Tensor count | 24 |
+| Independent memory measurement | 1.3359 MiB |
+| Project memory estimate | 1.3359 MiB |
+
+The measurements matched at the reported precision.
+
+## Testing and Validation
+
+The following tests passed in the latest recorded regression run:
+
+| Test | Validation |
+|---|---|
+| `test_pinned_cache.py` | Pinning, unpinning, and LRU protection |
+| `test_multiple_pinned_prefixes.py` | Multiple pinned prefix protection |
+| `test_memory_aware_cache.py` | Memory limits and memory-based eviction |
+| `test_real_model_memory.py` | Real GPT-2 KV memory accounting |
+| `test_concurrent_requests.py` | Concurrent inference output correctness |
+| `test_cache_thread_safety.py` | Concurrent cache operations and bounded capacity |
+
+Run the regression tests:
+
+```powershell
+python test_pinned_cache.py
+python test_multiple_pinned_prefixes.py
+python test_memory_aware_cache.py
+python test_real_model_memory.py
+python test_concurrent_requests.py
+python test_cache_thread_safety.py
+```
+
+**All six tests passed in the latest recorded regression run.**
+
+## Hardware and Environment
+
+| Component | Configuration |
+|---|---|
+| GPU | NVIDIA GeForce RTX 2050 |
+| GPU Memory | 4 GB |
+| PyTorch | 2.14.1+cu126 |
+| CUDA Build | 12.6 |
+| Transformers | 4.57.6 |
+| Benchmark Model | GPT-2 |
+| Operating System | Windows |
+
+Performance may vary depending on hardware, model architecture, prefix length, workload, and GPU utilization.
+
+## Limitations
+
+- Cache storage is currently in-memory and does not persist across application restarts.
+- Memory accounting estimates KV tensor payloads, not total GPU memory consumption.
+- Performance experiments primarily use GPT-2 and controlled workloads.
+- Prefix preparation introduces an initial computational cost.
+- Concurrent inference validation has been performed on limited workloads.
+- Broader testing across different Transformer architectures and production workloads remains future work.
+
+## Future Improvements
+
+- Persistent KV cache storage.
+- Support for additional Transformer architectures.
+- More extensive concurrent inference benchmarking.
+- Cache monitoring and visualization.
+- Workload-aware cache replacement strategies.
+- Integration with larger LLM inference systems.
+
+## Project Classification
+
+**Domain:** AI Systems and AI Infrastructure
+
+**Specialization:** LLM Inference Optimization
+
+**Implementation:** Python
+
+This project demonstrates practical concepts in Transformer inference, GPU memory management, cache design, performance optimization, and concurrent systems.
+
+## Author
 
 **Manisha Chindam**
 
 GitHub: [ManishaChindam0309](https://github.com/ManishaChindam0309)
 
+**Repository:** [Prefix KV Cache](https://github.com/ManishaChindam0309/prefix-kv-cache)
 
+---
+
+*Prefix KV Cache — Exploring efficient and reusable KV state management for Transformer inference.*
